@@ -22,18 +22,39 @@ python3 -m http.server 8000
 3. Click **Calibrate gaze** and look at each dot until it fills (9 dots, ~10s).
 4. Now play with your eyes.
 
+First time? Hit **Setup wizard** — it walks you through glasses mode, camera,
+calibration, and a quick gesture test in about a minute.
+
 ## Controls
 
 | Action | Eyes | Mouse | Keyboard |
 |--------|------|-------|----------|
-| Aim | look at a cell | hover | arrow keys |
+| Aim | look at a cell (cursor snaps to it) | hover | arrow keys |
 | Reveal | **dwell** until the ring fills | left click | Enter / Space |
-| Flag | **deliberate blink** (slightly long, both eyes) | right click | F |
+| Flag | **blink** (both eyes) or **wink** (one eye) | right click | F |
+| Pause/resume | ⏸ button | — | — |
 | New game | click the face 🙂 | click the face | — |
 
 Natural quick blinks are ignored, so you won't flag by accident. A revealed
 number can be **chorded** (click/dwell it again when its flags are satisfied) to
 open its neighbors.
+
+## Built for glasses + good UX
+
+- **Glasses mode** — instead of a fixed eye-closed threshold (which glare and
+  lens reflections break), blink/wink detection tracks each eye's *own* open
+  baseline and fires on a **relative drop**. Toggle it on for glasses or harsh
+  lighting; it also smooths gaze a bit more.
+- **Wink-to-flag** — an alternative to blinking for anyone who finds deliberate
+  blinks awkward or unreliable.
+- **Setup wizard** — guided first-run onboarding.
+- **Snap-to-cell cursor** — the gaze dot snaps to the cell you're near, so
+  imprecise webcam gaze still lands cleanly.
+- **Live feedback** — an "eye openness" bar shows your blink registering, plus
+  camera/signal/gaze status pills.
+- **Sound + visual cues** for reveal, flag, win, and lose (toggleable).
+- **Persisted settings** and **best times per difficulty** (localStorage).
+- **Pause/resume**, and `prefers-reduced-motion` support.
 
 ## How the eye control works
 
@@ -41,9 +62,11 @@ open its neighbors.
   gives iris + eye landmarks each frame. A quick 9-point calibration fits a
   least-squares affine map from iris-in-eye position to screen pixels. Output is
   smoothed and drives a gaze cursor.
-- **Blink:** the model's `eyeBlinkLeft`/`eyeBlinkRight` blendshapes feed a small
-  state machine that fires only on a *held* blink (≈180–900 ms), not natural
-  flickers.
+- **Blink/Wink:** an **adaptive eye-aspect-ratio** signal — per-eye eyelid
+  openness measured against each eye's own rolling "open" baseline — feeds a state
+  machine that fires only on a *held* gesture (≈160–1100 ms), not natural
+  flickers. This relative approach is what makes it robust for glasses/glare.
+  Blendshapes are used only as a soft confirmation when glasses mode is off.
 - Everything runs **on-device** — no video leaves your machine.
 
 Tunables in the side panel: **dwell time**, **blink sensitivity**, and **gaze
@@ -56,8 +79,10 @@ smoothing**.
 | `index.html` | Layout + UI |
 | `styles.css` | Styling |
 | `minesweeper.js` | Pure game logic + board rendering (no eye code) |
-| `eyetracking.js` | Webcam → gaze estimation + blink detection (MediaPipe) |
-| `app.js` | Glue: calibration, dwell-to-reveal, blink-to-flag, fallbacks |
+| `eyetracking.js` | Webcam → gaze estimation + adaptive blink/wink detection (MediaPipe) |
+| `app.js` | Glue: calibration, dwell-to-reveal, blink/wink-to-flag, settings, fallbacks |
+| `wizard.js` | Guided onboarding wizard |
+| `sound.js` | Synthesized WebAudio sound effects (no asset files) |
 | `RESEARCH.md` | Survey of eye-tracking libraries and why MediaPipe was chosen |
 
 ## Eye-tracking library choice

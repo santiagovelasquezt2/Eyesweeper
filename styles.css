@@ -248,7 +248,8 @@ select {
   transition: transform 0.04s linear;
 }
 .gaze-cursor.visible { display: block; }
-.gaze-cursor.blinking { border-color: var(--warn); background: rgba(251, 189, 35, 0.3); }
+.gaze-cursor.snapped { transition: transform 0.12s ease-out; width: 32px; height: 32px; margin-left: -16px; margin-top: -16px; }
+.gaze-cursor.blinking { border-color: var(--warn); background: rgba(251, 189, 35, 0.3); transform-origin: center; }
 
 /* Calibration overlay */
 .calibration-overlay {
@@ -280,4 +281,105 @@ select {
   position: absolute;
   bottom: 12%;
   color: var(--muted);
+}
+
+/* ---------- Build-out UI: rows, toggles, openness, best time, wizard ---------- */
+
+.btn-row { display: flex; gap: 8px; }
+.btn-row .primary-btn { flex: 1; }
+.icon-btn { width: 48px; flex: 0 0 auto; font-size: 1.1rem; }
+
+.quick-actions { display: flex; gap: 8px; margin: 12px 0; }
+.quick-actions .secondary-btn { flex: 1; }
+
+.board-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 16px; flex-wrap: wrap;
+}
+.best-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.toggle-row, .select-row {
+  display: flex !important; align-items: center; justify-content: space-between;
+  gap: 10px; color: var(--text) !important; font-weight: 500;
+}
+.toggle-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.select-row select {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
+}
+
+/* eye openness meter */
+.eye-openness-row { align-items: center; }
+.openness-bar {
+  position: relative; flex: 1; height: 10px; margin-left: 12px;
+  background: #2a3140; border-radius: 999px; overflow: hidden;
+}
+.openness-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 60%;
+  background: var(--good); border-radius: 999px; transition: width 0.06s linear;
+}
+.openness-fill.closed { background: var(--warn); }
+.openness-threshold {
+  position: absolute; top: -2px; bottom: -2px; width: 2px;
+  background: var(--bad); left: 55%;
+}
+
+/* ---------- Onboarding wizard ---------- */
+.wizard {
+  position: fixed; inset: 0; z-index: 10001;
+  background: rgba(8, 10, 14, 0.78);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.wizard.hidden { display: none; }
+.wizard.dimmed { opacity: 0; pointer-events: none; } /* hide during calibration */
+.wizard-card {
+  position: relative;
+  width: min(460px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.wizard-close {
+  position: absolute; top: 12px; right: 12px;
+  background: transparent; border: none; color: var(--muted);
+  font-size: 1.1rem; cursor: pointer;
+}
+.wizard-steps { display: flex; gap: 6px; margin-bottom: 18px; }
+.wiz-step { flex: 1; height: 4px; border-radius: 999px; background: #2a3140; }
+.wiz-step.active { background: var(--accent); }
+.wiz-step.done { background: var(--good); }
+.wizard-body h3 { margin: 0 0 12px; font-size: 1.25rem; }
+.wizard-body p { color: var(--muted); line-height: 1.5; }
+.wizard-body b { color: var(--text); }
+.wiz-list { color: var(--muted); line-height: 1.6; padding-left: 20px; }
+.wizard-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; }
+.wizard-footer .primary-btn, .wizard-footer .secondary-btn { width: auto; padding: 10px 22px; }
+.wizard-body .primary-btn { width: 100%; margin-top: 12px; }
+
+.wiz-status { font-weight: 600; color: var(--text) !important; }
+.wiz-big-toggle {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px; margin: 10px 0; cursor: pointer;
+  color: var(--text);
+}
+.wiz-big-toggle input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+.wiz-big-toggle select {
+  margin-left: auto; background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
+}
+.wiz-blinks { display: flex; gap: 14px; justify-content: center; margin: 18px 0; }
+.wiz-dot {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #2a3140; color: var(--muted); font-weight: 700; font-size: 1.2rem;
+  border: 2px solid var(--line); transition: all 0.2s ease;
+}
+.wiz-dot.done { background: rgba(54,211,153,0.2); color: var(--good); border-color: var(--good); transform: scale(1.08); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
 }
