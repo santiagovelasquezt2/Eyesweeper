@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EyeSweeper — Minesweeper you play with your eyes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>👁️ EyeSweeper</h1>
+    <p class="tagline">Minesweeper you play with your eyes. Gaze to aim, dwell to reveal, blink to flag.</p>
+  </header>
+
+  <main class="layout">
+    <section class="game-panel">
+      <div class="hud">
+        <div class="hud-item" title="Mines remaining">
+          <span class="hud-icon">💣</span>
+          <span id="mine-counter">0</span>
+        </div>
+        <button id="reset-btn" class="face-btn" title="New game">🙂</button>
+        <div class="hud-item" title="Time elapsed">
+          <span class="hud-icon">⏱️</span>
+          <span id="timer">0</span>
+        </div>
+      </div>
+
+      <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
+
+      <div class="difficulty">
+        <label for="difficulty-select">Difficulty</label>
+        <select id="difficulty-select">
+          <option value="beginner">Beginner (9×9, 10 mines)</option>
+          <option value="intermediate">Intermediate (16×16, 40 mines)</option>
+          <option value="expert">Expert (16×30, 99 mines)</option>
+        </select>
+      </div>
+
+      <p id="status-line" class="status-line">Pick a difficulty and start sweeping.</p>
+    </section>
+
+    <aside class="control-panel">
+      <h2>Eye control</h2>
+      <button id="eye-toggle" class="primary-btn">Enable eye tracking</button>
+
+      <div class="eye-status">
+        <div class="eye-status-row">
+          <span>Camera</span><span id="cam-status" class="pill pill-off">off</span>
+        </div>
+        <div class="eye-status-row">
+          <span>Gaze</span><span id="gaze-status" class="pill pill-off">—</span>
+        </div>
+        <div class="eye-status-row">
+          <span>Blink</span><span id="blink-status" class="pill pill-off">—</span>
+        </div>
+      </div>
+
+      <div class="cam-wrap">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+
+      <div class="calibration">
+        <button id="calibrate-btn" class="secondary-btn" disabled>Calibrate gaze</button>
+        <p class="hint">Look at each dot and hold still until it fills.</p>
+      </div>
+
+      <div class="settings">
+        <label>
+          Dwell to reveal: <span id="dwell-label">1.0s</span>
+          <input id="dwell-range" type="range" min="0.4" max="2.5" step="0.1" value="1.0" />
+        </label>
+        <label>
+          Blink sensitivity: <span id="blink-label">0.5</span>
+          <input id="blink-range" type="range" min="0.25" max="0.85" step="0.05" value="0.5" />
+        </label>
+        <label>
+          Gaze smoothing: <span id="smooth-label">0.30</span>
+          <input id="smooth-range" type="range" min="0.05" max="0.6" step="0.05" value="0.30" />
+        </label>
+      </div>
+
+      <details class="howto">
+        <summary>How to play with your eyes</summary>
+        <ul>
+          <li><b>Aim:</b> move your gaze over a cell — it highlights.</li>
+          <li><b>Reveal:</b> hold your gaze on a cell (dwell) until the ring completes.</li>
+          <li><b>Flag:</b> do a deliberate, slightly-long blink (both eyes) on the highlighted cell.</li>
+          <li>Natural quick blinks are ignored, so you won't flag by accident.</li>
+        </ul>
+        <p class="hint">No camera? It also plays with mouse (left = reveal, right = flag) and keyboard (arrows, Enter, F).</p>
+      </details>
+    </aside>
+  </main>
+
+  <!-- Gaze cursor -->
+  <div id="gaze-cursor" class="gaze-cursor" aria-hidden="true"></div>
+
+  <!-- Calibration overlay -->
+  <div id="calibration-overlay" class="calibration-overlay hidden">
+    <div id="calibration-dot" class="calibration-dot"></div>
+    <p class="calibration-text">Calibrating… look at the dot.</p>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
