@@ -140,6 +140,7 @@ export class Minesweeper {
 
     this._floodReveal(r, c);
     this._checkWin();
+    if (!this.gameOver) this.callbacks.onReveal?.();
     this._emit();
   }
 
@@ -166,6 +167,7 @@ export class Minesweeper {
     const neigh = this._neighbors(r, c);
     const flagged = neigh.filter(([nr, nc]) => this.grid[nr][nc].flagged).length;
     if (flagged !== cell.adj) return;
+    const before = this.revealedCount;
     for (const [nr, nc] of neigh) {
       const n = this.grid[nr][nc];
       if (!n.flagged && !n.revealed) {
@@ -174,6 +176,7 @@ export class Minesweeper {
       }
     }
     this._checkWin();
+    if (!this.gameOver && this.revealedCount > before) this.callbacks.onReveal?.();
     this._emit();
   }
 
@@ -181,12 +184,10 @@ export class Minesweeper {
     if (this.gameOver || !this._inBounds(r, c)) return;
     const cell = this.grid[r][c];
     if (cell.revealed) return;
-    if (this.firstClick) {
-      // allow flagging before first reveal; start timer lazily on reveal
-    }
     cell.flagged = !cell.flagged;
     this.flags += cell.flagged ? 1 : -1;
     this._paint(r, c);
+    this.callbacks.onFlag?.(cell.flagged);
     this._emit();
   }
 

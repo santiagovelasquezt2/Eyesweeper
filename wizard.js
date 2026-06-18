@@ -117,8 +117,9 @@ export function runWizard(ctx) {
         nextBtn.disabled = true;
         const prev = ctx.tracker.cb.onFlag;
         blinkUnsub = () => { ctx.tracker.cb.onFlag = prev; };
-        ctx.tracker.cb.onFlag = (kind) => {
-          prev?.(kind);
+        // during the test we deliberately do NOT call the app's handler, so we
+        // don't flag a random cell on the (hidden) board behind the wizard.
+        ctx.tracker.cb.onFlag = () => {
           blinkCount++;
           const dot = bodyEl.querySelector(`#wiz-b${Math.min(blinkCount, 2)}`);
           if (dot) dot.classList.add("done");

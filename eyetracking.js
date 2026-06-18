@@ -258,8 +258,10 @@ export class EyeTracker {
 
   _detectFlag(closedL, closedR, now) {
     if (now - this._lastFlagAt < this.cooldownMs) {
-      // still reset transient states so we don't fire stale events post-cooldown
+      // keep transient states in sync so no stale event fires after cooldown
       this._bothClosed = closedL && closedR;
+      this._leftWinkSince = 0;
+      this._rightWinkSince = 0;
       return;
     }
 

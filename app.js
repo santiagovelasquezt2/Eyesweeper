@@ -4,6 +4,7 @@
 import { Minesweeper, DIFFICULTIES } from "./minesweeper.js";
 import { EyeTracker } from "./eyetracking.js";
 import { sfx } from "./sound.js";
+import { runWizard } from "./wizard.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -59,6 +60,8 @@ const game = new Minesweeper(boardEl, {
     }
   },
   onTick: (t) => { timerEl.textContent = t; },
+  onReveal: () => sfx.reveal(),
+  onFlag: (flagged) => sfx.flag(flagged),
 });
 
 function newGame(msg) {
@@ -84,22 +87,6 @@ function renderBestTime() {
   $("best-time").textContent = t == null ? "—" : `${t}s`;
 }
 
-// ---------- Sound hooks on reveal/flag ----------
-const origReveal = game.reveal.bind(game);
-game.reveal = (r, c) => {
-  const before = game.revealedCount;
-  const wasOver = game.gameOver;
-  origReveal(r, c);
-  if (!wasOver && game.revealedCount > before && !game.gameOver) sfx.reveal();
-};
-const origToggleFlag = game.toggleFlag.bind(game);
-game.toggleFlag = (r, c) => {
-  const cell = game.grid[r]?.[c];
-  const wasFlagged = cell?.flagged;
-  origToggleFlag(r, c);
-  if (cell && cell.flagged !== wasFlagged) sfx.flag(cell.flagged);
-};
-
 // ---------- Keyboard fallback ----------
 let kbR = 0, kbC = 0;
 function moveKb(dr, dc) {
@@ -109,6 +96,7 @@ function moveKb(dr, dc) {
 }
 document.addEventListener("keydown", (e) => {
   if (!$("wizard").classList.contains("hidden")) return; // wizard captures focus
+  if (!$("calibration-overlay").classList.contains("hidden")) return; // calibrating
   switch (e.key) {
     case "ArrowUp": moveKb(-1, 0); e.preventDefault(); break;
     case "ArrowDown": moveKb(1, 0); e.preventDefault(); break;
@@ -196,6 +184,9 @@ const tracker = new EyeTracker($("webcam"), {
     updateDwell(hit ? hit.el : null, performance.now());
   },
   onFlag: () => {
+    // ignore gestures while an overlay (calibration / wizard) is up
+    if (!$("calibration-overlay").classList.contains("hidden")) return;
+    if (!$("wizard").classList.contains("hidden")) return;
     gazeCursor.classList.add("blinking");
     setTimeout(() => gazeCursor.classList.remove("blinking"), 220);
     const el = focusedEl;
@@ -333,8 +324,8 @@ async function runCalibration() {
     const px = fx * window.innerWidth, py = fy * window.innerHeight;
     calDot.style.left = px + "px"; calDot.style.top = py + "px";
     sfx.tick();
-    await animateDot(calDot, 1100);
-    await tracker.collectPoint(px, py, 1100);
+    // fill the dot and sample at the same time: the ring IS the progress bar
+    await Promise.all([animateDot(calDot, 1100), tracker.collectPoint(px, py, 1100)]);
   }
   calOverlay.classList.add("hidden");
   const ok = tracker.finalizeCalibration();
@@ -357,7 +348,6 @@ function animateDot(dot, ms) {
 }
 
 // ---------- Onboarding wizard ----------
-import { runWizard } from "./wizard.js";
 $("setup-btn").addEventListener("click", () => openWizard());
 
 function openWizard() {
