@@ -150,7 +150,7 @@ export function runWizard(ctx) {
   function show() {
     const step = steps[i];
     renderSteps();
-    bodyEl.innerHTML = `<h3>${step.title}</h3>${step.render()}`;
+    bodyEl.innerHTML = `<h3 id="wizard-title">${step.title}</h3>${step.render()}`;
     backBtn.style.visibility = i === 0 ? "hidden" : "visible";
     nextBtn.textContent = step.next || "Next";
     nextBtn.disabled = false;

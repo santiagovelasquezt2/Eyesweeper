@@ -111,7 +111,7 @@ export class Minesweeper {
       availH = window.innerHeight - 40;
     } else {
       const parent = this.boardEl.parentElement;
-      availW = parent.clientWidth;
+      availW = parent.clientWidth || (window.innerWidth - 40);
       availH = parent.clientHeight || (window.innerHeight - 40);
     }
     const size = Math.floor(

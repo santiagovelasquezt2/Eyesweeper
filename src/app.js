@@ -15,6 +15,56 @@ const timerEl = $("timer");
 const faceBtn = $("reset-btn");
 const gazeCursor = $("gaze-cursor");
 
+// ---------- Liquid glass light ----------
+const liquidSurfaceSelector = [
+  ".game-panel",
+  ".control-panel",
+  ".hud",
+  ".board-footer",
+  ".eye-status",
+  ".cam-wrap",
+  ".wizard-card",
+  ".calibration-text",
+].join(",");
+const reduceMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+let liquidLight = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.18 };
+let liquidLightRaf = 0;
+let liquidPressTimer = 0;
+
+function setLiquidLight(x, y) {
+  if (reduceMotionQuery?.matches) return;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  liquidLight = { x, y };
+  if (liquidLightRaf) return;
+  liquidLightRaf = requestAnimationFrame(flushLiquidLight);
+}
+
+function flushLiquidLight() {
+  liquidLightRaf = 0;
+  const { x, y } = liquidLight;
+  document.documentElement.style.setProperty("--liquid-x", x + "px");
+  document.documentElement.style.setProperty("--liquid-y", y + "px");
+  for (const el of document.querySelectorAll(liquidSurfaceSelector)) {
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) continue;
+    el.style.setProperty("--liquid-local-x", (x - rect.left) + "px");
+    el.style.setProperty("--liquid-local-y", (y - rect.top) + "px");
+  }
+}
+
+document.addEventListener("pointermove", (event) => {
+  setLiquidLight(event.clientX, event.clientY);
+}, { passive: true });
+
+document.addEventListener("pointerdown", (event) => {
+  setLiquidLight(event.clientX, event.clientY);
+  document.body.classList.add("liquid-pressing");
+  clearTimeout(liquidPressTimer);
+  liquidPressTimer = setTimeout(() => document.body.classList.remove("liquid-pressing"), 180);
+}, { passive: true });
+
+setLiquidLight(liquidLight.x, liquidLight.y);
+
 // ---------- Persistence ----------
 const STORE_KEY = "eyesweeper.settings.v1";
 const TIMES_KEY = "eyesweeper.besttimes.v1";
@@ -394,6 +444,7 @@ const tracker = new EyeTracker($("webcam"), {
       return;
     }
     setCursorVisible(true);
+    setLiquidLight(g.x, g.y);
     // Snap to the nearest cell so gutter/edge gaze never lands in a dead zone;
     // returns null only when gaze is clearly off the board (toolbar/menus).
     const hit = game.nearestCell(g.x, g.y);

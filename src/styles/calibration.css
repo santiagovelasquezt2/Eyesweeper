@@ -1,15 +1,19 @@
-/* Dwell-gated calibration — glowing blue ring on a dark shadow backdrop. */
+/* Dwell-gated calibration: precise target, liquid-glass backdrop. */
 
 .calibration-overlay {
+  --liquid-local-x: 50%;
+  --liquid-local-y: 0%;
   position: fixed;
   inset: 0;
   z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(8, 14, 24, 0.74);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background:
+    radial-gradient(640px 460px at var(--liquid-x, 50vw) var(--liquid-y, 18vh), rgba(255, 255, 255, 0.16), transparent 62%),
+    rgba(8, 14, 24, 0.66);
+  -webkit-backdrop-filter: saturate(150%) blur(14px);
+  backdrop-filter: saturate(150%) blur(14px);
 }
 
 .calibration-overlay.hidden {
@@ -27,12 +31,18 @@
   margin-left: calc(var(--ring-size) / -2);
   margin-top: calc(var(--ring-size) / -2);
   border-radius: 50%;
-  background: transparent;
-  border: 4px solid rgba(var(--accent), 0.55);
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.86), transparent 20%),
+    rgba(var(--accent), 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  -webkit-backdrop-filter: saturate(190%) contrast(108%) blur(10px);
+  backdrop-filter: saturate(190%) contrast(108%) blur(10px);
   box-shadow:
-    0 0 18px 2px rgba(var(--accent), 0.55),
-    0 0 42px 8px rgba(var(--accent), 0.30),
-    inset 0 0 16px 0 rgba(var(--accent), 0.35);
+    0 0 0 3px rgba(var(--accent), 0.54),
+    0 0 22px 4px rgba(var(--accent), 0.42),
+    0 0 58px 12px rgba(var(--accent), 0.24),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.64),
+    inset -2px -2px 0 rgba(0, 52, 120, 0.22);
   animation: cal-breathe 2.4s ease-in-out infinite;
 }
 
@@ -40,23 +50,27 @@
   0%, 100% {
     transform: scale(1);
     box-shadow:
-      0 0 18px 2px rgba(var(--accent), 0.55),
-      0 0 42px 8px rgba(var(--accent), 0.30),
-      inset 0 0 16px 0 rgba(var(--accent), 0.35);
+      0 0 0 3px rgba(var(--accent), 0.54),
+      0 0 22px 4px rgba(var(--accent), 0.42),
+      0 0 58px 12px rgba(var(--accent), 0.24),
+      inset 2px 2px 0 rgba(255, 255, 255, 0.64),
+      inset -2px -2px 0 rgba(0, 52, 120, 0.22);
   }
   50% {
-    transform: scale(1.06);
+    transform: scale(1.045);
     box-shadow:
-      0 0 26px 4px rgba(var(--accent), 0.75),
-      0 0 60px 14px rgba(var(--accent), 0.40),
-      inset 0 0 20px 0 rgba(var(--accent), 0.45);
+      0 0 0 4px rgba(var(--accent), 0.68),
+      0 0 28px 6px rgba(var(--accent), 0.54),
+      0 0 70px 16px rgba(var(--accent), 0.30),
+      inset 2px 2px 0 rgba(255, 255, 255, 0.74),
+      inset -2px -2px 0 rgba(0, 52, 120, 0.24);
   }
 }
 
 /* Progress arc — fills clockwise as the stare is held. */
 .calibration-ring-fill {
   position: absolute;
-  inset: -4px; /* cover the ring's border band */
+  inset: -8px; /* cover the ring's glow band */
   border-radius: 50%;
   background: conic-gradient(
     rgb(var(--accent)) calc(var(--ring-progress, 0) * 360deg),
@@ -65,13 +79,13 @@
   /* mask to a ring so only the rim shows the arc */
   -webkit-mask: radial-gradient(
     farthest-side,
-    transparent calc(100% - 7px),
-    #000 calc(100% - 6px)
+    transparent calc(100% - 9px),
+    #000 calc(100% - 8px)
   );
   mask: radial-gradient(
     farthest-side,
-    transparent calc(100% - 7px),
-    #000 calc(100% - 6px)
+    transparent calc(100% - 9px),
+    #000 calc(100% - 8px)
   );
   filter: drop-shadow(0 0 6px rgba(var(--accent), 0.9));
   pointer-events: none;
@@ -87,10 +101,12 @@
   margin: -5px 0 0 -5px;
   border-radius: 50%;
   background: rgb(var(--accent));
-  box-shadow: 0 0 10px 3px rgba(var(--accent), 0.85);
+  box-shadow: 0 0 10px 3px rgba(var(--accent), 0.85), 0 0 0 4px rgba(255, 255, 255, 0.18);
 }
 
 .calibration-text {
+  --liquid-local-x: 50%;
+  --liquid-local-y: 0%;
   position: absolute;
   bottom: 10%;
   left: 50%;
@@ -102,8 +118,19 @@
   font-size: 1rem;
   letter-spacing: 0.01em;
   text-align: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background:
+    radial-gradient(220px 80px at var(--liquid-local-x, 50%) var(--liquid-local-y, 0%), rgba(255, 255, 255, 0.30), transparent 58%),
+    rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+  backdrop-filter: saturate(150%) blur(10px);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.24),
+    0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calibration-ring {
+    animation: none;
+  }
 }

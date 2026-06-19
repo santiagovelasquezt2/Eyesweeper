@@ -4,10 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EyeSweeper — Minesweeper you play with your eyes</title>
-  <link rel="stylesheet" href="src/styles/styles.css?v=liquid-classic-2" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=liquid-glass-3" />
   <link rel="stylesheet" href="src/styles/calibration.css" />
 </head>
 <body>
+  <svg class="liquid-glass-defs" aria-hidden="true" focusable="false">
+    <filter id="liquid-glass-refraction" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.032" numOctaves="2" seed="7" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
+
   <header class="topbar">
     <h1>👁️ EyeSweeper</h1>
     <p class="tagline">Minesweeper you play with your eyes. Gaze to aim, dwell to reveal, blink to flag.</p>
@@ -43,7 +50,7 @@
         </div>
       </div>
 
-      <p id="status-line" class="status-line">Pick a difficulty and start sweeping.</p>
+      <p id="status-line" class="status-line" role="status" aria-live="polite">Pick a difficulty and start sweeping.</p>
     </section>
 
     <aside class="control-panel">
@@ -135,7 +142,7 @@
   </div>
 
   <!-- Onboarding wizard -->
-  <div id="wizard" class="wizard hidden">
+  <div id="wizard" class="wizard hidden" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
     <div class="wizard-card">
       <button id="wizard-close" class="wizard-close" title="Close">✕</button>
       <div class="wizard-steps" id="wizard-steps"></div>
@@ -147,6 +154,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/app.js?v=liquid-classic-2"></script>
+  <script type="module" src="src/app.js?v=liquid-glass-3"></script>
 </body>
 </html>

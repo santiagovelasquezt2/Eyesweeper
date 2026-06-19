@@ -731,27 +731,31 @@ export class EyeTracker {
     });
   }
 
-  // Dwell-gated collection: only accepts a sustained, steady stare.
-  // Resolves when the gaze is held stable for holdMs (or maxMs elapses).
-  collectPointGated(screenX, screenY, { holdMs = 700, maxMs = 7000, onProgress } = {}) {
+  // Dwell-gated collection: accepts a sustained, steady stare. Progress fills
+  // while the gaze is held steady on the target and drains when it wanders, so
+  // the ring reflects an actual stare. A hard maxMs timeout guarantees the point
+  // always completes — it never hangs if features stop arriving (e.g. the face
+  // is briefly lost, the tab is throttled, or the camera stalls).
+  collectPointGated(screenX, screenY, { holdMs = 800, maxMs = 5000, onProgress } = {}) {
     return new Promise((resolve) => {
-      const STABLE = 3.0;       // dispersion threshold (lower = stricter)
-      const MIN_WIN = 6;        // need this many samples before judging stability
-      const WIN_CAP = 12;       // rolling window size
-      const win = [];
-      let held = [];
-      let heldMs = 0;
-      const startT = performance.now();
-      let lastT = startT;
+      const WIN_CAP = 10;       // rolling window (~0.4s) for the steadiness estimate
+      const MOVING = 3.5;       // steadiness above this means the gaze is moving (lenient)
+      const win = [];           // recent features, for the steadiness estimate
+      const steady = [];        // features captured while holding steady (for the fit)
+      let progress = 0;         // 0..1 dwell progress
+      let lastT = performance.now();
+      let done = false;
 
       const range = (arr, key) => {
         let mn = Infinity, mx = -Infinity;
         for (const s of arr) { const v = s[key]; if (v < mn) mn = v; if (v > mx) mx = v; }
         return mx - mn;
       };
-      const dispersion = (arr) =>
-        range(arr, "bgx") / 0.30 + range(arr, "bgy") / 0.30 +
-        range(arr, "hx") / 0.05 + range(arr, "hy") / 0.05;
+      // Per-dimension scales so mixed magnitudes compare fairly. A small window
+      // (<4) counts as steady so the ring can start filling promptly.
+      const steadiness = (arr) => arr.length < 4 ? 0 :
+        range(arr, "bgx") / 0.35 + range(arr, "bgy") / 0.35 +
+        range(arr, "hx") / 0.06 + range(arr, "hy") / 0.06;
 
       const avgOf = (arr) => {
         const acc = arr.reduce((a, s) => ({
@@ -764,8 +768,11 @@ export class EyeTracker {
       };
 
       const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
         this._collecting = null;
-        const src = held.length ? held : win;
+        const src = steady.length ? steady : win;
         let count = 0;
         if (src.length) {
           this.calibSamples.push({ feat: avgOf(src), x: screenX, y: screenY });
@@ -775,26 +782,28 @@ export class EyeTracker {
         resolve(count);
       };
 
+      // Hard guarantee: always completes, even if _collecting stops being called.
+      const timer = setTimeout(finish, maxMs);
+
       this._collecting = (feat) => {
+        if (done) return;
         const now = performance.now();
-        const dt = now - lastT;
+        const dt = Math.min(100, now - lastT);  // cap so a stall can't dump progress
         lastT = now;
 
         win.push(feat);
         if (win.length > WIN_CAP) win.shift();
 
-        const stable = win.length >= MIN_WIN && dispersion(win) < STABLE;
-        if (stable) {
-          held.push(feat);
-          heldMs += dt;
-          if (onProgress) onProgress(Math.min(1, heldMs / holdMs));
+        if (steadiness(win) > MOVING) {
+          // wandering: drain rather than hard-reset, so a blink or micro-saccade
+          // doesn't zero a nearly-full ring.
+          progress = Math.max(0, progress - dt / holdMs);
         } else {
-          held = [];
-          heldMs = 0;
-          if (onProgress) onProgress(0);
+          progress = Math.min(1, progress + dt / holdMs);
+          steady.push(feat);
         }
-
-        if (heldMs >= holdMs || (now - startT) > maxMs) finish();
+        if (onProgress) onProgress(progress);
+        if (progress >= 1) finish();
       };
     });
   }
