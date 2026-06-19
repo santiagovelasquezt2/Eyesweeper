@@ -42,7 +42,7 @@ solutions, now shipped as **Tasks Vision**). For each frame it returns:
 You build the gaze map yourself. EyeSweeper does this with a quick 9-point
 calibration that fits a least-squares affine map from the normalized iris
 position (iris offset within the eye box) to screen pixels. That's exactly what
-`eyetracking.js` implements.
+`src/eye/eyetracking.js` implements.
 
 ### 2. WebGazer.js — easiest turnkey gaze
 Brown University's classic webcam eye-tracker. It self-calibrates from natural

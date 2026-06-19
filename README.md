@@ -12,14 +12,18 @@ Because it uses the webcam and ES modules, serve it over `localhost` (or https) 
 opening `index.html` from `file://` won't get camera access.
 
 ```bash
-# from the repo root, any static server works:
-python3 -m http.server 8000
+git clone https://github.com/santiagovelasquezt2/Eyesweeper.git
+cd Eyesweeper
+npm start        # one command — runs `python3 -m http.server 8000` (no install needed)
 # then open http://localhost:8000
 ```
 
+`npm run qa` does the same thing — both just spin up python3's built-in static
+server (no dependencies, no `npm install`).
+
 1. Pick a difficulty and start sweeping (mouse/keyboard work immediately).
 2. Click **Enable eye tracking** and allow the camera.
-3. Click **Calibrate gaze** and look at each dot until it fills (9 dots, ~10s).
+3. Click **Calibrate gaze** and look at each dot until it fills (13 dots, ~15s).
 4. Now play with your eyes.
 
 First time? Hit **Setup wizard** — it walks you through glasses mode, camera,
@@ -59,7 +63,7 @@ open its neighbors.
 ## How the eye control works
 
 - **Gaze:** [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker)
-  gives iris + eye landmarks each frame. A quick 9-point calibration fits a
+  gives iris + eye landmarks each frame. A quick 13-point calibration fits a
   least-squares affine map from iris-in-eye position to screen pixels. Output is
   smoothed and drives a gaze cursor.
 - **Blink/Wink:** an **adaptive eye-aspect-ratio** signal — per-eye eyelid
@@ -76,13 +80,14 @@ smoothing**.
 
 | File | What it does |
 |------|--------------|
-| `index.html` | Layout + UI |
-| `styles.css` | Styling |
-| `minesweeper.js` | Pure game logic + board rendering (no eye code) |
-| `eyetracking.js` | Webcam → gaze estimation + adaptive blink/wink detection (MediaPipe) |
-| `app.js` | Glue: calibration, dwell-to-reveal, blink/wink-to-flag, settings, fallbacks |
-| `wizard.js` | Guided onboarding wizard |
-| `sound.js` | Synthesized WebAudio sound effects (no asset files) |
+| `index.html` | Layout + UI (entry point) |
+| `src/app.js` | Glue: calibration, dwell-to-reveal, blink/wink-to-flag, settings, fallbacks |
+| `src/game/minesweeper.js` | Pure game logic + board rendering (no eye code) |
+| `src/eye/eyetracking.js` | Webcam → gaze estimation + adaptive blink/wink detection (MediaPipe) |
+| `src/ui/wizard.js` | Guided onboarding wizard |
+| `src/ui/sound.js` | Synthesized WebAudio sound effects (no asset files) |
+| `src/styles/styles.css` | Styling |
+| `package.json` | `npm start` — serves the app on http://localhost:8000 (no install needed) |
 | `RESEARCH.md` | Survey of eye-tracking libraries and why MediaPipe was chosen |
 
 ## Eye-tracking library choice

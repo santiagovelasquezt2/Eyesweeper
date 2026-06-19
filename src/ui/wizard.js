@@ -84,8 +84,8 @@ export function runWizard(ctx) {
     {
       title: "Calibrate your gaze",
       render: () => `
-        <p>Nine dots will appear. <b>Look straight at each dot</b> and keep your head
-        still until it fills. Takes about ten seconds.</p>
+        <p>Thirteen dots will appear. <b>Look straight at each dot</b> and keep your head
+        still until it fills. Takes about fifteen seconds.</p>
         <p id="wiz-cal-status" class="wiz-status">${ctx.tracker.hasCalibration() ? "✅ Already calibrated — recalibrate if you like." : "Ready when you are."}</p>
         <button id="wiz-cal-btn" class="primary-btn">${ctx.tracker.hasCalibration() ? "Recalibrate" : "Start calibration"}</button>`,
       onEnter: () => {

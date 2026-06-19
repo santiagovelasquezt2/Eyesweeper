@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EyeSweeper — Minesweeper you play with your eyes</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="src/styles/styles.css?v=liquid-classic-2" />
 </head>
 <body>
   <header class="topbar">
@@ -16,17 +16,17 @@
     <section class="game-panel">
       <div class="hud">
         <div class="hud-item" title="Mines remaining">
-          <span class="hud-icon">💣</span>
-          <span id="mine-counter">0</span>
+          <span id="mine-counter">000</span>
         </div>
-        <button id="reset-btn" class="face-btn" title="New game">🙂</button>
+        <button id="reset-btn" class="face-btn" title="New game" aria-label="New game"></button>
         <div class="hud-item" title="Time elapsed">
-          <span class="hud-icon">⏱️</span>
-          <span id="timer">0</span>
+          <span id="timer">000</span>
         </div>
       </div>
 
-      <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
+      <div class="board-scroll" aria-label="Scrollable board area">
+        <div id="board" class="board" role="grid" aria-label="Minesweeper board"></div>
+      </div>
 
       <div class="board-footer">
         <div class="difficulty">
@@ -75,7 +75,7 @@
 
       <div class="quick-actions">
         <button id="calibrate-btn" class="secondary-btn" disabled>Recalibrate gaze</button>
-        <button id="setup-btn" class="secondary-btn" disabled>Setup wizard</button>
+        <button id="setup-btn" class="secondary-btn">Setup wizard</button>
       </div>
 
       <div class="settings">
@@ -146,6 +146,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="src/app.js?v=liquid-classic-2"></script>
 </body>
 </html>
