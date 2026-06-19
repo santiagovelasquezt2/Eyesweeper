@@ -548,7 +548,7 @@ pauseBtn.addEventListener("click", () => {
 
 // ---------- Calibration (standalone "recalibrate") ----------
 const calOverlay = $("calibration-overlay");
-const calDot = $("calibration-dot");
+const calRing = $("calibration-ring");
 $("calibrate-btn").addEventListener("click", () => runCalibration());
 
 function calibrationPoints() {
@@ -571,10 +571,15 @@ async function runCalibration() {
   calOverlay.classList.remove("hidden");
   for (const [fx, fy] of calibrationPoints()) {
     const px = fx * window.innerWidth, py = fy * window.innerHeight;
-    calDot.style.left = px + "px"; calDot.style.top = py + "px";
+    calRing.style.left = px + "px"; calRing.style.top = py + "px";
+    calRing.style.setProperty("--ring-progress", 0);
     sfx.tick();
-    // pulse the dot and sample at the same time
-    await Promise.all([animateDot(calDot, 1100), tracker.collectPoint(px, py, 1100)]);
+    // dwell-gated: only advances once the user holds a steady stare
+    await tracker.collectPointGated(px, py, {
+      holdMs: 700,
+      onProgress: (p) => calRing.style.setProperty("--ring-progress", p.toFixed(3)),
+    });
+    sfx.tick(); // confirm the point landed
   }
   calOverlay.classList.add("hidden");
   const ok = tracker.finalizeCalibration();
@@ -583,17 +588,6 @@ async function runCalibration() {
     : "Calibration failed — try again with good lighting and a steady head.";
   statusLine.className = "status-line" + (ok ? "" : " lose");
   return ok;
-}
-
-function animateDot(dot, ms) {
-  return new Promise((resolve) => {
-    const start = performance.now();
-    (function step(now) {
-      const p = Math.min(1, (now - start) / ms);
-      dot.style.setProperty("--dot-progress", p.toFixed(3));
-      if (p < 1) requestAnimationFrame(step); else resolve();
-    })(performance.now());
-  });
 }
 
 // ---------- Onboarding wizard ----------

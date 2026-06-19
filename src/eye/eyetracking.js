@@ -731,6 +731,74 @@ export class EyeTracker {
     });
   }
 
+  // Dwell-gated collection: only accepts a sustained, steady stare.
+  // Resolves when the gaze is held stable for holdMs (or maxMs elapses).
+  collectPointGated(screenX, screenY, { holdMs = 700, maxMs = 7000, onProgress } = {}) {
+    return new Promise((resolve) => {
+      const STABLE = 3.0;       // dispersion threshold (lower = stricter)
+      const MIN_WIN = 6;        // need this many samples before judging stability
+      const WIN_CAP = 12;       // rolling window size
+      const win = [];
+      let held = [];
+      let heldMs = 0;
+      const startT = performance.now();
+      let lastT = startT;
+
+      const range = (arr, key) => {
+        let mn = Infinity, mx = -Infinity;
+        for (const s of arr) { const v = s[key]; if (v < mn) mn = v; if (v > mx) mx = v; }
+        return mx - mn;
+      };
+      const dispersion = (arr) =>
+        range(arr, "bgx") / 0.30 + range(arr, "bgy") / 0.30 +
+        range(arr, "hx") / 0.05 + range(arr, "hy") / 0.05;
+
+      const avgOf = (arr) => {
+        const acc = arr.reduce((a, s) => ({
+          bgx: a.bgx + s.bgx, bgy: a.bgy + s.bgy,
+          hx: a.hx + s.hx, hy: a.hy + s.hy,
+          yaw: a.yaw + s.yaw, pitch: a.pitch + s.pitch,
+        }), { bgx: 0, bgy: 0, hx: 0, hy: 0, yaw: 0, pitch: 0 });
+        const k = arr.length || 1;
+        return { bgx: acc.bgx / k, bgy: acc.bgy / k, hx: acc.hx / k, hy: acc.hy / k, yaw: acc.yaw / k, pitch: acc.pitch / k };
+      };
+
+      const finish = () => {
+        this._collecting = null;
+        const src = held.length ? held : win;
+        let count = 0;
+        if (src.length) {
+          this.calibSamples.push({ feat: avgOf(src), x: screenX, y: screenY });
+          count = src.length;
+        }
+        if (onProgress) onProgress(1);
+        resolve(count);
+      };
+
+      this._collecting = (feat) => {
+        const now = performance.now();
+        const dt = now - lastT;
+        lastT = now;
+
+        win.push(feat);
+        if (win.length > WIN_CAP) win.shift();
+
+        const stable = win.length >= MIN_WIN && dispersion(win) < STABLE;
+        if (stable) {
+          held.push(feat);
+          heldMs += dt;
+          if (onProgress) onProgress(Math.min(1, heldMs / holdMs));
+        } else {
+          held = [];
+          heldMs = 0;
+          if (onProgress) onProgress(0);
+        }
+
+        if (heldMs >= holdMs || (now - startT) > maxMs) finish();
+      };
+    });
+  }
+
   resetCalibration() {
     this.calibSamples = [];
     this.calib = null;

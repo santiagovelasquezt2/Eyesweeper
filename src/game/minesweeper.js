@@ -102,13 +102,22 @@ export class Minesweeper {
 
   _computeCellSize() {
     const cols = this.cols;
+    const rows = this.rows;
+    const pad = 20; // board inner padding + border slack on each axis
+    let availW;
+    let availH;
     if (!this.boardEl || !this.boardEl.parentElement) {
-      const avail = window.innerWidth - 40;
-      return Math.max(20, Math.min(36, Math.floor(avail / cols)));
+      availW = window.innerWidth - 40;
+      availH = window.innerHeight - 40;
+    } else {
+      const parent = this.boardEl.parentElement;
+      availW = parent.clientWidth;
+      availH = parent.clientHeight || (window.innerHeight - 40);
     }
-    const parent = this.boardEl.parentElement;
-    const available = parent.clientWidth - 16 - 4;
-    return Math.max(20, Math.min(36, Math.floor(available / cols)));
+    const size = Math.floor(
+      Math.min((availW - pad) / cols, (availH - pad) / rows)
+    );
+    return Math.max(22, Math.min(96, size));
   }
 
   _recomputeCellSize() {

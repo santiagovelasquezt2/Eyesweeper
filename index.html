@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EyeSweeper — Minesweeper you play with your eyes</title>
   <link rel="stylesheet" href="src/styles/styles.css?v=liquid-classic-2" />
+  <link rel="stylesheet" href="src/styles/calibration.css" />
 </head>
 <body>
   <header class="topbar">
@@ -129,8 +130,8 @@
 
   <!-- Calibration overlay -->
   <div id="calibration-overlay" class="calibration-overlay hidden">
-    <div id="calibration-dot" class="calibration-dot"></div>
-    <p class="calibration-text">Calibrating… look at the dot.</p>
+    <div id="calibration-ring" class="calibration-ring"><span class="calibration-ring-fill"></span><span class="calibration-ring-core"></span></div>
+    <p class="calibration-text">Stare at the circle until it fills, then it moves on.</p>
   </div>
 
   <!-- Onboarding wizard -->
