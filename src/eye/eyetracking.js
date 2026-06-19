@@ -439,46 +439,34 @@ export class EyeTracker {
   // Graceful fallback: missing blendshapes -> bgx=bgy=0; missing matrix ->
   // yaw=pitch=0. Never throws (an older model degrades to iris-only).
   _feature(L, blend, mat) {
-    // --- iris PC-EC vector, averaged across both eyes (always available) ---
-    // pupil-center minus eye-corner midpoint, normalized by the eye-corner span.
-    const eye = (iris, c1, c2) => {
-      const ax = L[c2].x - L[c1].x;       // eye-corner span (x)
-      const ay = L[c2].y - L[c1].y;       // eye-corner span (y)
-      const span = Math.hypot(ax, ay);
-      if (span < 1e-6) return null;
-      const cx = (L[c1].x + L[c2].x) / 2; // eye center = corner midpoint
-      const cy = (L[c1].y + L[c2].y) / 2;
-      return { hx: (L[iris].x - cx) / span, hy: (L[iris].y - cy) / span };
+    // --- head-pose-robust geometric iris gaze, averaged across both eyes ---
+    // Project the iris into the EYE'S OWN frame: horizontal onto the
+    // inner->outer corner axis (cancels head roll), normalized by eye width;
+    // vertical onto the perpendicular axis, normalized by the LIVE eyelid
+    // opening (so a squint/partial blink doesn't bias it). This replaces the
+    // coarse ARKit eyeLook* blendshapes, which are too quantized for cell-level
+    // pointing — two adjacent cells could read identically.
+    const eye = (iris, inner, outer, top, bot) => {
+      const I = L[iris], A = L[inner], B = L[outer], T = L[top], D = L[bot];
+      if (!I || !A || !B || !T || !D) return null;
+      const axx = B.x - A.x, axy = B.y - A.y;       // inner->outer corner axis
+      const eyeW = Math.hypot(axx, axy);
+      if (eyeW < 1e-6) return null;
+      const ux = axx / eyeW, uy = axy / eyeW;       // unit corner axis (removes roll)
+      const cmx = (A.x + B.x) / 2, cmy = (A.y + B.y) / 2;
+      const h = ((I.x - cmx) * ux + (I.y - cmy) * uy) / eyeW;
+      const lid = Math.hypot(T.x - D.x, T.y - D.y); // live top<->bottom lid opening
+      if (lid < 1e-6) return null;
+      const lmx = (T.x + D.x) / 2, lmy = (T.y + D.y) / 2;
+      const v = ((I.x - lmx) * -uy + (I.y - lmy) * ux) / lid;
+      return { h, v };
     };
-    const r = eye(IDX.rightIris, IDX.rightInner, IDX.rightOuter);
-    const l = eye(IDX.leftIris, IDX.leftInner, IDX.leftOuter);
+    // top/bottom eyelid centers: right (159,145), left (386,374).
+    const r = eye(IDX.rightIris, IDX.rightInner, IDX.rightOuter, 159, 145);
+    const l = eye(IDX.leftIris, IDX.leftInner, IDX.leftOuter, 386, 374);
     if (!r || !l) return null;
-    const hx = (r.hx + l.hx) / 2;
-    const hy = (r.hy + l.hy) / 2;
-
-    // --- blendshape gaze (head-normalized, PRIMARY) ---
-    let bgx = 0, bgy = 0;
-    const cats = blend && blend.categories;
-    if (cats && cats.length) {
-      let lookInR = 0, lookOutR = 0, lookInL = 0, lookOutL = 0;
-      let lookUpR = 0, lookDownR = 0, lookUpL = 0, lookDownL = 0;
-      for (const c of cats) {
-        switch (c.categoryName) {
-          case "eyeLookInRight": lookInR = c.score; break;
-          case "eyeLookOutRight": lookOutR = c.score; break;
-          case "eyeLookInLeft": lookInL = c.score; break;
-          case "eyeLookOutLeft": lookOutL = c.score; break;
-          case "eyeLookUpRight": lookUpR = c.score; break;
-          case "eyeLookDownRight": lookDownR = c.score; break;
-          case "eyeLookUpLeft": lookUpL = c.score; break;
-          case "eyeLookDownLeft": lookDownL = c.score; break;
-        }
-      }
-      // consistent rightward signal across both eyes; up minus down for vertical.
-      // (Absolute sign/scale is irrelevant — calibration fits it.)
-      bgx = ((lookOutR - lookInR) + (lookInL - lookOutL)) / 2;
-      bgy = ((lookUpR + lookUpL) - (lookDownR + lookDownL)) / 2;
-    }
+    const u = clamp((r.h + l.h) / 2, -2, 2);
+    const v = clamp((r.v + l.v) / 2, -2, 2);
 
     // --- head pose from the column-major 4x4 transformation matrix ---
     // R[row][col] = m[col*4 + row].
@@ -499,7 +487,7 @@ export class EyeTracker {
       }
     }
 
-    return { bgx, bgy, hx, hy, yaw, pitch };
+    return { u, v, yaw, pitch };
   }
 
   // ---- EAR per eye: mean(vertical lid gaps) / horizontal eye width ----
@@ -717,13 +705,11 @@ export class EyeTracker {
         if (samples.length) {
           const keep = samples.slice(Math.floor(samples.length / 3));
           const avg = keep.reduce((acc, s) => ({
-            bgx: acc.bgx + s.bgx, bgy: acc.bgy + s.bgy,
-            hx: acc.hx + s.hx, hy: acc.hy + s.hy,
+            u: acc.u + s.u, v: acc.v + s.v,
             yaw: acc.yaw + s.yaw, pitch: acc.pitch + s.pitch,
-          }), { bgx: 0, bgy: 0, hx: 0, hy: 0, yaw: 0, pitch: 0 });
+          }), { u: 0, v: 0, yaw: 0, pitch: 0 });
           const k = keep.length;
-          avg.bgx /= k; avg.bgy /= k; avg.hx /= k; avg.hy /= k;
-          avg.yaw /= k; avg.pitch /= k;
+          avg.u /= k; avg.v /= k; avg.yaw /= k; avg.pitch /= k;
           this.calibSamples.push({ feat: avg, x: screenX, y: screenY });
         }
         resolve(samples.length);
@@ -739,7 +725,7 @@ export class EyeTracker {
   collectPointGated(screenX, screenY, { holdMs = 800, maxMs = 5000, onProgress } = {}) {
     return new Promise((resolve) => {
       const WIN_CAP = 10;       // rolling window (~0.4s) for the steadiness estimate
-      const MOVING = 3.5;       // steadiness above this means the gaze is moving (lenient)
+      const MOVING = 2.5;       // steadiness above this means the gaze is moving (lenient)
       const win = [];           // recent features, for the steadiness estimate
       const steady = [];        // features captured while holding steady (for the fit)
       let progress = 0;         // 0..1 dwell progress
@@ -754,17 +740,15 @@ export class EyeTracker {
       // Per-dimension scales so mixed magnitudes compare fairly. A small window
       // (<4) counts as steady so the ring can start filling promptly.
       const steadiness = (arr) => arr.length < 4 ? 0 :
-        range(arr, "bgx") / 0.35 + range(arr, "bgy") / 0.35 +
-        range(arr, "hx") / 0.06 + range(arr, "hy") / 0.06;
+        range(arr, "u") / 0.30 + range(arr, "v") / 0.50;
 
       const avgOf = (arr) => {
         const acc = arr.reduce((a, s) => ({
-          bgx: a.bgx + s.bgx, bgy: a.bgy + s.bgy,
-          hx: a.hx + s.hx, hy: a.hy + s.hy,
+          u: a.u + s.u, v: a.v + s.v,
           yaw: a.yaw + s.yaw, pitch: a.pitch + s.pitch,
-        }), { bgx: 0, bgy: 0, hx: 0, hy: 0, yaw: 0, pitch: 0 });
+        }), { u: 0, v: 0, yaw: 0, pitch: 0 });
         const k = arr.length || 1;
-        return { bgx: acc.bgx / k, bgy: acc.bgy / k, hx: acc.hx / k, hy: acc.hy / k, yaw: acc.yaw / k, pitch: acc.pitch / k };
+        return { u: acc.u / k, v: acc.v / k, yaw: acc.yaw / k, pitch: acc.pitch / k };
       };
 
       const finish = () => {
@@ -822,7 +806,7 @@ export class EyeTracker {
     if (s.length < 4) return false;
     // Full 10-term basis (with quadratic/cross terms) needs >=10 points;
     // otherwise drop to the 7-term linear basis to avoid overfitting.
-    const full = s.length >= 10;
+    const full = s.length >= 6;
     const X = s.map((p) => basis(p.feat, full));
     const n = X.length, m = X[0].length;
 
@@ -849,11 +833,20 @@ export class EyeTracker {
       return out;
     });
 
-    const ax = solveLeastSquares(Xs, s.map((p) => p.x));
-    const ay = solveLeastSquares(Xs, s.map((p) => p.y));
+    const ax = solveLeastSquares(Xs, s.map((p) => p.x), { ridge: RIDGE });
+    const ay = solveLeastSquares(Xs, s.map((p) => p.y), { ridge: RIDGE });
     if (!ax || !ay) return false;
     if (!ax.every(Number.isFinite) || !ay.every(Number.isFinite)) return false;
     this.calib = { ax, ay, full, mean, std };
+    // Validation: RMS pixel error of the fit on its own calibration points. If
+    // gaze can't even land near its training targets, it won't lock on live.
+    let se = 0;
+    for (const p of s) {
+      const ex = this._apply(ax, p.feat) - p.x;
+      const ey = this._apply(ay, p.feat) - p.y;
+      se += ex * ex + ey * ey;
+    }
+    this.calibError = Math.round(Math.sqrt(se / s.length));
     this._initEuro();
     return true;
   }
@@ -888,13 +881,18 @@ export class EyeTracker {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-// Term vector for the gaze map, built from the rich feature object.
-// Blendshape gaze (bgx,bgy) is the primary regressor (quadratic when enough
-// data); iris (hx,hy) adds fine resolution and head pose (yaw,pitch) lets the
-// fit correct for head-movement-induced shift.
-//   full=true  (>=10 pts): [1, bgx, bgy, bgx^2, bgy^2, bgx*bgy, hx, hy, yaw, pitch] -> 10 terms
-//   full=false (<10 pts):  [1, bgx, bgy, hx, hy, yaw, pitch]                          -> 7 terms
+// Term vector for the gaze map. The current geometric feature path emits a
+// compact {u, v} pair; keep the older rich-feature shape supported for tests and
+// for any persisted/debug samples that still contain bgx/bgy/hx/hy/yaw/pitch.
 function basis(feat, full) {
+  if (Number.isFinite(feat.u) && Number.isFinite(feat.v)) {
+    const { u, v } = feat;
+    // Compact 2nd-order polynomial: the cross term + both quadratics capture
+    // screen-corner distortion without overfitting sparse calibration.
+    if (full) return [1, u, v, u * v, u * u, v * v];
+    return [1, u, v];
+  }
+
   const { bgx, bgy, hx, hy, yaw, pitch } = feat;
   if (full) {
     return [1, bgx, bgy, bgx * bgx, bgy * bgy, bgx * bgy, hx, hy, yaw, pitch];
@@ -902,13 +900,17 @@ function basis(feat, full) {
   return [1, bgx, bgy, hx, hy, yaw, pitch];
 }
 
-// Ridge regularization added to the normal-matrix diagonal. Meaningful now that
-// columns are standardized: each standardized column's X^T X diagonal ≈ n (~12),
-// so a lambda of order 1 actually regularizes (1e-4 would be negligible).
-const RIDGE = 1.0;
+// Ridge regularization added to the normal-matrix diagonal. Columns are
+// standardized, so each column's X^T X diagonal ≈ n (~13); a lambda well below
+// that (here ~0.3) regularizes the quadratic terms enough to stay stable while
+// still letting the fit reach the screen edges (a large lambda pulls gaze toward
+// center — a cause of "won't lock on"). Tunable; sweep ~0.05–1.0.
+const RIDGE = 0.3;
 
 // Solve (X^T X + lambda I) b = X^T y for b. X is n×m (m = number of basis terms).
-function solveLeastSquares(X, y) {
+// Pass ridge > 0 for noisy calibration fits; leave it at 0 for exact ordinary
+// least-squares use.
+function solveLeastSquares(X, y, { ridge = 0 } = {}) {
   const n = X.length;
   if (!n) return null;
   const m = X[0].length;
@@ -923,7 +925,7 @@ function solveLeastSquares(X, y) {
     }
   }
   // skip A[0][0]: never penalize the intercept (it carries the screen-center offset)
-  for (let r = 1; r < m; r++) A[r][r] += RIDGE;
+  for (let r = 1; r < m; r++) A[r][r] += ridge;
   return solveLinear(A, g);
 }
 

@@ -4,19 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EyeSweeper — Minesweeper you play with your eyes</title>
-  <link rel="stylesheet" href="src/styles/styles.css?v=liquid-glass-3" />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="src/styles/styles.css?v=native-apple-3" />
   <link rel="stylesheet" href="src/styles/calibration.css" />
 </head>
 <body>
-  <svg class="liquid-glass-defs" aria-hidden="true" focusable="false">
-    <filter id="liquid-glass-refraction" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.032" numOctaves="2" seed="7" result="noise" />
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G" />
-    </filter>
-  </svg>
-
   <header class="topbar">
-    <h1>👁️ EyeSweeper</h1>
+    <h1>EyeSweeper</h1>
     <p class="tagline">Minesweeper you play with your eyes. Gaze to aim, dwell to reveal, blink to flag.</p>
   </header>
 
@@ -46,7 +40,7 @@
           </select>
         </div>
         <div class="best-time" title="Your best time on this difficulty">
-          🏆 Best: <span id="best-time">—</span>
+          Best: <span id="best-time">—</span>
         </div>
       </div>
 
@@ -57,7 +51,7 @@
       <h2>Eye control</h2>
       <div class="btn-row">
         <button id="eye-toggle" class="primary-btn">Enable eye tracking</button>
-        <button id="pause-btn" class="secondary-btn icon-btn" title="Pause / resume eye control" disabled>⏸</button>
+        <button id="pause-btn" class="secondary-btn icon-btn" title="Pause / resume eye control" aria-label="Pause eye control" data-state="running" disabled></button>
       </div>
 
       <div class="eye-status">
@@ -88,7 +82,7 @@
 
       <div class="settings">
         <label class="toggle-row">
-          <span>👓 Glasses mode</span>
+          <span>Glasses mode</span>
           <input id="glasses-toggle" type="checkbox" />
         </label>
         <p class="hint">On for glasses/strong glare: uses relative eyelid motion instead of fixed thresholds, and smooths gaze more.</p>
@@ -114,7 +108,7 @@
           <input id="smooth-range" type="range" min="0.05" max="0.6" step="0.05" value="0.30" />
         </label>
         <label class="toggle-row">
-          <span>🔊 Sound</span>
+          <span>Sound</span>
           <input id="sound-toggle" type="checkbox" checked />
         </label>
       </div>
@@ -154,6 +148,6 @@
     </div>
   </div>
 
-  <script type="module" src="src/app.js?v=liquid-glass-3"></script>
+  <script type="module" src="src/app.js?v=native-apple-1"></script>
 </body>
 </html>

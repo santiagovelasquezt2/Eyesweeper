@@ -16,7 +16,7 @@ export function runWizard(ctx) {
 
   const steps = [
     {
-      title: "Welcome to EyeSweeper 👁️",
+      title: "Welcome to EyeSweeper",
       render: () => `
         <p>Let's set up hands-free play in about a minute. You'll:</p>
         <ol class="wiz-list">
@@ -34,7 +34,7 @@ export function runWizard(ctx) {
         uses your eyelids' <i>relative</i> motion instead, which is far more reliable.</p>
         <label class="wiz-big-toggle">
           <input type="checkbox" id="wiz-glasses" ${ctx.settings.glasses ? "checked" : ""}/>
-          <span>👓 I wear glasses / there's glare — use Glasses mode</span>
+          <span>I wear glasses or there is glare - use Glasses mode</span>
         </label>
         <label class="wiz-big-toggle">
           <span>Flag gesture</span>
@@ -64,7 +64,7 @@ export function runWizard(ctx) {
       render: () => `
         <p>EyeSweeper needs your webcam to see your eyes. Video is processed
         <b>entirely on your device</b> — nothing is uploaded.</p>
-        <p id="wiz-cam-status" class="wiz-status">${ctx.isEyeOn() ? "✅ Camera is on." : "Click below to enable the camera."}</p>
+        <p id="wiz-cam-status" class="wiz-status">${ctx.isEyeOn() ? "Camera is on." : "Click below to enable the camera."}</p>
         <button id="wiz-cam-btn" class="primary-btn" ${ctx.isEyeOn() ? "disabled" : ""}>
           ${ctx.isEyeOn() ? "Camera enabled" : "Enable camera"}
         </button>`,
@@ -75,8 +75,8 @@ export function runWizard(ctx) {
         btn?.addEventListener("click", async () => {
           btn.textContent = "Starting…"; btn.disabled = true;
           const ok = await ctx.startEye();
-          if (ok) { st.textContent = "✅ Camera is on."; btn.textContent = "Camera enabled"; nextBtn.disabled = false; }
-          else { st.textContent = "⚠️ Couldn't start the camera. Check permissions."; btn.textContent = "Try again"; btn.disabled = false; }
+          if (ok) { st.textContent = "Camera is on."; btn.textContent = "Camera enabled"; nextBtn.disabled = false; }
+          else { st.textContent = "Couldn't start the camera. Check permissions."; btn.textContent = "Try again"; btn.disabled = false; }
         });
       },
       next: "Next",
@@ -86,7 +86,7 @@ export function runWizard(ctx) {
       render: () => `
         <p>Thirteen dots will appear. <b>Look straight at each dot</b> and keep your head
         still until it fills. Takes about fifteen seconds.</p>
-        <p id="wiz-cal-status" class="wiz-status">${ctx.tracker.hasCalibration() ? "✅ Already calibrated — recalibrate if you like." : "Ready when you are."}</p>
+        <p id="wiz-cal-status" class="wiz-status">${ctx.tracker.hasCalibration() ? "Already calibrated. Recalibrate if you like." : "Ready when you are."}</p>
         <button id="wiz-cal-btn" class="primary-btn">${ctx.tracker.hasCalibration() ? "Recalibrate" : "Start calibration"}</button>`,
       onEnter: () => {
         const btn = bodyEl.querySelector("#wiz-cal-btn");
@@ -96,7 +96,7 @@ export function runWizard(ctx) {
           wizard.classList.add("dimmed");
           const ok = await ctx.runCalibration();
           wizard.classList.remove("dimmed");
-          st.textContent = ok ? "✅ Calibrated!" : "⚠️ That didn't take — try again with good lighting.";
+          st.textContent = ok ? "Calibrated." : "That didn't take. Try again with good lighting.";
           btn.textContent = "Recalibrate";
           nextBtn.disabled = !ok;
         });
@@ -124,7 +124,7 @@ export function runWizard(ctx) {
           const dot = bodyEl.querySelector(`#wiz-b${Math.min(blinkCount, 2)}`);
           if (dot) dot.classList.add("done");
           ctx.sfx.flag(true);
-          if (blinkCount >= 2) { st.textContent = "✅ Great — gesture detected!"; nextBtn.disabled = false; }
+          if (blinkCount >= 2) { st.textContent = "Gesture detected."; nextBtn.disabled = false; }
           else st.textContent = "Detected 1 — one more.";
         };
       },
@@ -132,7 +132,7 @@ export function runWizard(ctx) {
       next: "Next",
     },
     {
-      title: "You're all set 🎉",
+      title: "You're all set",
       render: () => `
         <p><b>Aim</b> with your gaze · <b>dwell</b> to reveal · <b>${ctx.settings.flagGesture === "wink" ? "wink" : "blink"}</b> to flag.</p>
         <p>Tweak dwell time, sensitivity, and smoothing any time in the side panel.

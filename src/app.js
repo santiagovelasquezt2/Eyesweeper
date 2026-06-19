@@ -15,56 +15,6 @@ const timerEl = $("timer");
 const faceBtn = $("reset-btn");
 const gazeCursor = $("gaze-cursor");
 
-// ---------- Liquid glass light ----------
-const liquidSurfaceSelector = [
-  ".game-panel",
-  ".control-panel",
-  ".hud",
-  ".board-footer",
-  ".eye-status",
-  ".cam-wrap",
-  ".wizard-card",
-  ".calibration-text",
-].join(",");
-const reduceMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-let liquidLight = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.18 };
-let liquidLightRaf = 0;
-let liquidPressTimer = 0;
-
-function setLiquidLight(x, y) {
-  if (reduceMotionQuery?.matches) return;
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-  liquidLight = { x, y };
-  if (liquidLightRaf) return;
-  liquidLightRaf = requestAnimationFrame(flushLiquidLight);
-}
-
-function flushLiquidLight() {
-  liquidLightRaf = 0;
-  const { x, y } = liquidLight;
-  document.documentElement.style.setProperty("--liquid-x", x + "px");
-  document.documentElement.style.setProperty("--liquid-y", y + "px");
-  for (const el of document.querySelectorAll(liquidSurfaceSelector)) {
-    const rect = el.getBoundingClientRect();
-    if (!rect.width || !rect.height) continue;
-    el.style.setProperty("--liquid-local-x", (x - rect.left) + "px");
-    el.style.setProperty("--liquid-local-y", (y - rect.top) + "px");
-  }
-}
-
-document.addEventListener("pointermove", (event) => {
-  setLiquidLight(event.clientX, event.clientY);
-}, { passive: true });
-
-document.addEventListener("pointerdown", (event) => {
-  setLiquidLight(event.clientX, event.clientY);
-  document.body.classList.add("liquid-pressing");
-  clearTimeout(liquidPressTimer);
-  liquidPressTimer = setTimeout(() => document.body.classList.remove("liquid-pressing"), 180);
-}, { passive: true });
-
-setLiquidLight(liquidLight.x, liquidLight.y);
-
 // ---------- Persistence ----------
 const STORE_KEY = "eyesweeper.settings.v1";
 const TIMES_KEY = "eyesweeper.besttimes.v1";
@@ -98,7 +48,7 @@ const game = new Minesweeper(boardEl, {
       if (s.won) {
         sfx.win();
         const prev = bestTimes[currentDifficulty];
-        let msg = `You cleared it in ${s.elapsed}s! 🎉`;
+        let msg = `You cleared it in ${s.elapsed}s.`;
         if (prev == null || s.elapsed < prev) {
           bestTimes[currentDifficulty] = s.elapsed; saveTimes(); renderBestTime();
           msg += " New best!";
@@ -107,7 +57,7 @@ const game = new Minesweeper(boardEl, {
         statusLine.className = "status-line win";
       } else {
         sfx.lose();
-        statusLine.textContent = "Boom. Hit a mine — press the face to retry.";
+        statusLine.textContent = "Boom. Hit a mine — start a new game to retry.";
         statusLine.className = "status-line lose";
       }
     } else {
@@ -444,7 +394,6 @@ const tracker = new EyeTracker($("webcam"), {
       return;
     }
     setCursorVisible(true);
-    setLiquidLight(g.x, g.y);
     // Snap to the nearest cell so gutter/edge gaze never lands in a dead zone;
     // returns null only when gaze is clearly off the board (toolbar/menus).
     const hit = game.nearestCell(g.x, g.y);
@@ -549,6 +498,11 @@ const eyeToggle = $("eye-toggle");
 const pauseBtn = $("pause-btn");
 let eyeOn = false, paused = false;
 
+function setPauseButtonState(isPaused) {
+  pauseBtn.dataset.state = isPaused ? "paused" : "running";
+  pauseBtn.setAttribute("aria-label", isPaused ? "Resume eye control" : "Pause eye control");
+}
+
 eyeToggle.addEventListener("click", async () => {
   if (eyeOn) { teardownEye(); return; }
   await startEye();
@@ -583,7 +537,7 @@ function teardownEye() {
   eyeOn = false; paused = false;
   document.body.classList.remove("eye-active");
 	  eyeToggle.textContent = "Enable eye tracking";
-	  pauseBtn.textContent = "⏸"; pauseBtn.disabled = true;
+	  setPauseButtonState(false); pauseBtn.disabled = true;
 	  $("calibrate-btn").disabled = true;
 	  setCursorVisible(false);
 	  clearDwell(); highlightCell(null);
@@ -592,7 +546,7 @@ function teardownEye() {
 pauseBtn.addEventListener("click", () => {
   paused = !paused;
   tracker.setPaused(paused);
-  pauseBtn.textContent = paused ? "▶" : "⏸";
+  setPauseButtonState(paused);
   // gaze stops feeding updateDwell while paused, so clear any in-flight dwell ring.
   if (paused) { setCursorVisible(false); clearDwell(); highlightCell(null); }
 });
@@ -617,7 +571,7 @@ function calibrationPoints() {
 
 async function runCalibration() {
   if (!eyeOn) return false;
-  if (paused) { paused = false; tracker.setPaused(false); pauseBtn.textContent = "⏸"; }
+  if (paused) { paused = false; tracker.setPaused(false); setPauseButtonState(false); }
   tracker.resetCalibration();
   calOverlay.classList.remove("hidden");
   for (const [fx, fy] of calibrationPoints()) {
@@ -635,7 +589,8 @@ async function runCalibration() {
   calOverlay.classList.add("hidden");
   const ok = tracker.finalizeCalibration();
   statusLine.textContent = ok
-    ? "Calibrated! Look at a cell to aim, dwell to reveal, blink to flag."
+    ? `Calibrated (±${tracker.calibError}px). Look at a cell to aim, dwell to reveal, blink to flag.` +
+      (tracker.calibError > 90 ? " High error — recalibrate with a steadier head and good lighting." : "")
     : "Calibration failed — try again with good lighting and a steady head.";
   statusLine.className = "status-line" + (ok ? "" : " lose");
   return ok;
@@ -652,7 +607,7 @@ function openWizard() {
     settings, applySettings, saveSettings,
     onDone: () => {
       settings.onboarded = true; saveSettings();
-      statusLine.textContent = "All set — happy sweeping! 👁️";
+      statusLine.textContent = "All set — happy sweeping.";
       statusLine.className = "status-line";
     },
   });

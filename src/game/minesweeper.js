@@ -117,7 +117,7 @@ export class Minesweeper {
     const size = Math.floor(
       Math.min((availW - pad) / cols, (availH - pad) / rows)
     );
-    return Math.max(22, Math.min(96, size));
+    return Math.max(32, Math.min(96, size));
   }
 
   _recomputeCellSize() {
