@@ -783,6 +783,20 @@ summary:focus-visible {
 .howto ul { padding-left: 18px; }
 .howto li { margin: 6px 0; }
 
+/* ---------- Gaze heatmap blob ---------- */
+/* Full-screen canvas that paints the soft, dragging heat trail of where the
+   gaze is pointing. Sits just under the precise cursor + all overlays. The
+   canvas paints its own transparency, so it never blocks the page. */
+#gaze-heat {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9998;
+  display: block;
+}
+
 /* ---------- Gaze cursor (glassy) ---------- */
 .gaze-cursor {
   position: fixed;
@@ -1452,13 +1466,16 @@ select {
   font-size: 0.92rem;
 }
 
+/* Small, crisp precise dot that rides the center of the heat blob — it marks the
+   exact gaze point for fine aiming while the warm blob shows the soft trail. */
 .gaze-cursor {
-  width: 24px;
-  height: 24px;
-  margin-left: -12px;
-  margin-top: -12px;
-  background: rgba(0, 113, 227, 0.14);
-  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.76), 0 8px 24px rgba(0, 113, 227, 0.22);
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  margin-top: -7px;
+  border-color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 1.5px rgba(120, 40, 0, 0.55), 0 0 10px rgba(255, 120, 40, 0.5);
 }
 
 .wizard {

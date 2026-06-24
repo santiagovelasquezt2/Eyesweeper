@@ -5,6 +5,7 @@ import { Minesweeper, DIFFICULTIES } from "./game/minesweeper.js";
 import { EyeTracker } from "./eye/eyetracking.js";
 import { sfx } from "./ui/sound.js";
 import { runWizard } from "./ui/wizard.js";
+import { GazeHeatmap } from "./ui/gazeviz.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -14,6 +15,11 @@ const mineCounter = $("mine-counter");
 const timerEl = $("timer");
 const faceBtn = $("reset-btn");
 const gazeCursor = $("gaze-cursor");
+
+// The dragging heatmap blob: the primary "where am I looking" indicator. It
+// follows the RAW (un-snapped) gaze so the motion is continuous, while the cell
+// highlight below shows which cell the gaze is locked onto.
+const heat = new GazeHeatmap();
 
 // ---------- Persistence ----------
 const STORE_KEY = "eyesweeper.settings.v1";
@@ -386,24 +392,30 @@ const tracker = new EyeTracker($("webcam"), {
   onGaze: (g) => {
     const now = performance.now();
     if (!g) {
-      // Gaze momentarily lost: hide the cursor but DON'T reset dwell. Not a
-      // fixation, so dwell decays through the grace window (never a hard reset).
+      // Gaze momentarily lost: hide the cursor + blob but DON'T reset dwell. Not
+      // a fixation, so dwell decays through the grace window (never a hard reset).
       setCursorVisible(false);
+      heat.hide();
       updateDwell(resolveActive(null, null), null, now, false);
       highlightCell(activeEl);
       return;
     }
     setCursorVisible(true);
+    // The heatmap blob tracks the raw gaze point so its motion is smooth and
+    // continuous — the user sees the tracker responding, not teleporting.
+    heat.push(g.x, g.y, g.fixating === true);
     // Snap to the nearest cell so gutter/edge gaze never lands in a dead zone;
     // returns null only when gaze is clearly off the board (toolbar/menus).
     const hit = game.nearestCell(g.x, g.y);
     const rawEl = hit ? hit.el : null;
-    // One resolved active cell drives cursor, highlight, and dwell so they agree.
+    // One resolved active cell drives highlight + dwell so they agree.
     // Dwell only accumulates while `g.fixating` (eyes holding still on a point).
     const active = resolveActive(rawEl, g);
     updateDwell(active, rawEl, now, g.fixating === true);
     const focus = activeEl || rawEl;
-    cursorTo(g, focus);
+    // Precise dot follows raw gaze (un-snapped) so it stays glued to the blob's
+    // core; the cell highlight communicates the lock-on instead.
+    cursorTo(g, null);
     highlightCell(focus);
   },
   onFlag: () => {
@@ -540,6 +552,7 @@ function teardownEye() {
 	  setPauseButtonState(false); pauseBtn.disabled = true;
 	  $("calibrate-btn").disabled = true;
 	  setCursorVisible(false);
+	  heat.clear();
 	  clearDwell(); highlightCell(null);
 }
 
@@ -548,7 +561,7 @@ pauseBtn.addEventListener("click", () => {
   tracker.setPaused(paused);
   setPauseButtonState(paused);
   // gaze stops feeding updateDwell while paused, so clear any in-flight dwell ring.
-  if (paused) { setCursorVisible(false); clearDwell(); highlightCell(null); }
+  if (paused) { setCursorVisible(false); heat.clear(); clearDwell(); highlightCell(null); }
 });
 
 // ---------- Calibration (standalone "recalibrate") ----------
@@ -573,6 +586,7 @@ async function runCalibration() {
   if (!eyeOn) return false;
   if (paused) { paused = false; tracker.setPaused(false); setPauseButtonState(false); }
   tracker.resetCalibration();
+  heat.clear();
   calOverlay.classList.remove("hidden");
   for (const [fx, fy] of calibrationPoints()) {
     const px = fx * window.innerWidth, py = fy * window.innerHeight;
@@ -641,4 +655,27 @@ if (debugPerf) {
     const p = tracker.getPerf();
     perfEl.textContent = "inf " + p.inferenceFPS + "fps\navg " + p.avgDetectMs.toFixed(1) + "ms\ndrop " + p.droppedFrames + "\nrndr " + p.renderFPS + "fps\nstate " + (tracker.state || "?");
   }, 250);
+}
+
+// ---------- No-camera blob preview (?gazeDemo) ----------
+// Drives the heatmap blob along a smooth Lissajous path so the gaze visual can
+// be seen/evaluated without granting webcam access. Pure visual; touches no game
+// or tracker state.
+if (new URLSearchParams(location.search).has("gazeDemo")) {
+  statusLine.textContent = "Gaze blob preview — move is simulated (no camera).";
+  let t0 = 0;
+  const step = (t) => {
+    if (!t0) t0 = t;
+    const e = (t - t0) / 1000;
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const x = cx + Math.sin(e * 0.9) * window.innerWidth * 0.34;
+    const y = cy + Math.sin(e * 1.4 + 0.6) * window.innerHeight * 0.30;
+    // pause periodically to show the "hot" fixation state
+    const fixating = Math.sin(e * 0.5) > 0.7;
+    heat.push(x, y, fixating);
+    gazeCursor.classList.add("visible");
+    gazeCursor.style.transform = `translate(${x}px, ${y}px)`;
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
