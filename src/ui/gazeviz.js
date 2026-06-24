@@ -72,12 +72,14 @@ export class GazeHeatmap {
     this.target = null;
   }
 
-  // Hard reset (teardown / pause / calibration): wipe the canvas immediately.
+  // Hard reset (teardown / pause / calibration): stop the loop + wipe immediately.
   clear() {
     this._on = false;
     this.target = null;
     this.pos = null;
     this.heat = 0;
+    this._idleFrames = 0;
+    if (this._raf != null) { cancelAnimationFrame(this._raf); this._raf = null; }
     if (this.ctx) this.ctx.clearRect(0, 0, this.w, this.h);
   }
 
@@ -117,7 +119,9 @@ export class GazeHeatmap {
     this.heat += (targetHeat - this.heat) * (1 - Math.pow(0.02, s));
 
     // 4) Stamp the warm blob + bright core at the current render position.
-    if (this.pos && (this._on || this._idleFrames < 90)) {
+    //    Only while actively steered: once gaze is lost we stop adding heat and
+    //    let the per-frame fade dissolve the trail smoothly (no frozen blob).
+    if (this._on && this.pos) {
       const moving = Math.min(1, speed / 6);
       const r = 24 + 28 * moving - 6 * this.heat; // tighter when hot, looser when moving
       const a = 0.14 + 0.12 * this.heat;
@@ -125,8 +129,8 @@ export class GazeHeatmap {
       this._core(this.pos.x, this.pos.y, 8 + 5 * this.heat);
     }
 
-    // Keep the loop alive while visible; once gaze is lost, run a few more frames
-    // so the trail finishes fading, then stop and clear.
+    // Keep the loop alive while visible; once gaze is lost, keep fading for a
+    // bounded number of frames so the trail dissolves, then stop and clear.
     if (this._on) {
       this._idleFrames = 0;
       this._raf = requestAnimationFrame(this._tick);
@@ -135,6 +139,7 @@ export class GazeHeatmap {
     } else {
       this._raf = null;
       this.pos = null;
+      this._idleFrames = 0;
       ctx.clearRect(0, 0, this.w, this.h);
     }
   }
